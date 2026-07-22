@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db/pool');
+const contentRoutes = require('./routes/content');
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'ok', service: 'socialflow-ai-backend', db: 'disconnected', error: err.message });
   }
 });
+
+app.use('/api/content', contentRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

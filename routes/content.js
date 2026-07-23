@@ -6,10 +6,6 @@ const router = express.Router();
 
 // POST /api/content/generate
 // body: { topic, platforms: ["linkedin", "twitter"], auto_publish: boolean }
-// Generates one content piece per requested platform.
-// If auto_publish is true, the piece is stored as 'approved' immediately
-// (ready for n8n to publish on its next scheduled run).
-// If false, it's stored as 'draft', waiting for manual approval.
 router.post('/generate', async (req, res) => {
   try {
     const { topic, platforms, auto_publish } = req.body;
@@ -23,8 +19,6 @@ router.post('/generate', async (req, res) => {
 
     const results = [];
 
-    // Generate sequentially rather than in parallel - avoids hitting
-    // Hugging Face's free-tier rate limit with simultaneous requests.
     for (const platform of platforms) {
       let bodyText;
       try {
@@ -32,7 +26,7 @@ router.post('/generate', async (req, res) => {
       } catch (aiErr) {
         console.error(`AI generation failed for ${platform}:`, aiErr.message);
         results.push({ platform, error: aiErr.message });
-        continue; // skip inserting this one, but keep processing other platforms
+        continue;
       }
 
       const status = auto_publish ? 'approved' : 'draft';
@@ -127,6 +121,31 @@ router.patch('/:id/reject', async (req, res) => {
   } catch (err) {
     console.error('Reject content error:', err);
     res.status(500).json({ error: 'Failed to reject content' });
+  }
+});
+
+// PATCH /api/content/:id/publish
+// Called by n8n after it has actually posted the content to the platform
+// (or, until real platform posting is wired up, used to mark it published
+// once you've posted it yourself using the generated text).
+router.patch('/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const check = await pool.query('SELECT id, status FROM content_pieces WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Content piece not found' });
+    }
+
+    await pool.query(
+      `UPDATE content_pieces SET status = 'published', published_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    res.json({ message: 'Content marked as published', id });
+  } catch (err) {
+    console.error('Publish content error:', err);
+    res.status(500).json({ error: 'Failed to mark content as published' });
   }
 });
 

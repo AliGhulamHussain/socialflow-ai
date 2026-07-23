@@ -5,7 +5,7 @@ const HF_URL = 'https://router.huggingface.co/v1/chat/completions';
 // ":auto" lets Hugging Face pick whichever backing provider currently has
 // this model available, instead of us hardcoding one specific provider
 // that might be rate-limited or retired (same lesson learned from FinSight AI).
-const MODEL = 'meta-llama/Llama-3.3-70B-Instruct:auto';
+const MODEL = 'meta-llama/Llama-3.3-70B-Instruct';
 
 /**
  * Calls Hugging Face's chat completions endpoint with a plain prompt.
